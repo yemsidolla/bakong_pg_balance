@@ -1,0 +1,10 @@
+services:
+  balance-alert:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    # Override env from .env when running in Docker (e.g. different BAKONG_BASE_URL for host)
+    # environment:
+    #   - BAKONG_BASE_URL=http://host.docker.internal:80
+    restart: unless-stopped

@@ -2,9 +2,13 @@
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.config import settings
+
+# Cambodia (UTC+7)
+CAMBODIA_TZ = ZoneInfo("Asia/Phnom_Penh")
 from app.services.bakong import get_auth_token, get_balance_summary
 from app.services.telegram import send_telegram_message
 
@@ -35,7 +39,7 @@ async def run_balance_check() -> None:
     total_account = summary.get("totalAccount", 0)
     usd, khr = _parse_amounts(total_amounts)
     label = settings.balance_label
-    ts = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+    ts = datetime.now(CAMBODIA_TZ).isoformat(timespec="milliseconds")
 
     # 1. Notification: send current balance to notification chat on every run
     if settings.telegram_chat_id_notification:

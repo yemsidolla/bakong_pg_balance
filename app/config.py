@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     bakong_username: str = ""
     bakong_password: str = ""
 
+    # Balance label shown in Telegram (e.g. BLCB, BLBK)
+    balance_label: str = "BLCB"
+
     # Balance thresholds (alert when below these)
     threshold_usd: float = 10_000.0
     threshold_khr: float = 1_000_000.0

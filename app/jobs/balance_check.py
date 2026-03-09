@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from app.config import settings
 from app.services.bakong import get_auth_token, get_balance_summary
@@ -33,14 +34,14 @@ async def run_balance_check() -> None:
     total_amounts = summary.get("totalAmounts") or {}
     total_account = summary.get("totalAccount", 0)
     usd, khr = _parse_amounts(total_amounts)
+    label = settings.balance_label
+    ts = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
     # 1. Notification: send current balance to notification chat on every run
     if settings.telegram_chat_id_notification:
         notification_msg = (
-            "📊 Balance (every run)\n"
-            f"USD: {usd:,.2f}\n"
-            f"KHR: {khr:,.2f}\n"
-            f"Total accounts: {total_account}"
+            f"At query timestamp: {ts}\n"
+            f"{label} Balance - KHR: {khr:,.2f}, USD: {usd:,.2f}"
         )
         await send_telegram_message(notification_msg, settings.telegram_chat_id_notification)
 
@@ -49,13 +50,21 @@ async def run_balance_check() -> None:
     low_khr = khr < settings.threshold_khr
 
     if low_usd or low_khr:
-        parts = ["🔔 Low balance alert"]
-        if low_usd:
-            parts.append(f"USD: {usd:,.2f} (threshold: {settings.threshold_usd:,.2f})")
-        if low_khr:
-            parts.append(f"KHR: {khr:,.2f} (threshold: {settings.threshold_khr:,.2f})")
-        parts.append(f"Total accounts: {total_account}")
-        msg = "\n".join(parts)
+        shortage_khr = max(0, settings.threshold_khr - khr) if low_khr else 0
+        msg_parts = [
+            f"⚠️ BALANCE STILL LOW (Check #{total_account})",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            f"⏰ Timestamp: {ts}",
+            "",
+            f"🔴 {label} KHR: {khr:,.2f}",
+            f"   Threshold: {settings.threshold_khr:,.2f}",
+            f"   Shortage: {shortage_khr:,.2f}",
+            "",
+            "📊 All Balances:",
+            f"   {label} - KHR: {khr:,.2f}",
+            f"   {label} - USD: {usd:,.2f}",
+        ]
+        msg = "\n".join(msg_parts)
         sent = await send_telegram_message(msg)  # uses telegram_chat_id (alert)
         if sent:
             logger.info("Low balance alert sent via Telegram")

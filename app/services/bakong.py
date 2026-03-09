@@ -48,13 +48,20 @@ async def get_auth_token() -> str:
         return token
 
 
-async def get_balance_summary(token: str) -> dict[str, Any]:
-    """Fetch iroha account summary (balance) using Bearer token."""
+async def get_balance_inquiry(token: str) -> dict[str, Any]:
+    """Fetch balance from balance-inquiry API (fast-core/{code}). Returns shape with totalAmounts, totalAccount."""
+    code = settings.balance_inquiry_code
+    url = f"{settings.bakong_base_url.rstrip('/')}/tps/api/balance-inquiry/fast-core/{code}"
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.get(
-            f"{settings.bakong_base_url.rstrip('/')}/tps/api/iroha-account-summary",
-            params={"branch": "ALL", "type": "ALL"},
+            url,
             headers={"Authorization": f"Bearer {token}"},
         )
         r.raise_for_status()
-        return r.json()
+        data = r.json()
+    # Normalize to same shape as before: totalAmounts from assets, totalAccount optional
+    assets = data.get("assets") or {}
+    return {
+        "totalAmounts": assets,
+        "totalAccount": 0,
+    }

@@ -9,7 +9,7 @@ from app.config import settings
 
 # Cambodia (UTC+7)
 CAMBODIA_TZ = ZoneInfo("Asia/Phnom_Penh")
-from app.services.bakong import get_auth_token, get_balance_summary
+from app.services.bakong import get_auth_token, get_balance_inquiry
 from app.services.telegram import send_telegram_message
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ async def run_balance_check() -> None:
     """Async workflow: auth -> get balance -> notification every run -> alert if low."""
     try:
         token = await get_auth_token()
-        summary = await get_balance_summary(token)
+        summary = await get_balance_inquiry(token)
     except Exception as e:
         logger.exception("Failed to fetch balance")
         if settings.telegram_bot_token and settings.telegram_chat_id:
@@ -55,19 +55,32 @@ async def run_balance_check() -> None:
 
     if low_usd or low_khr:
         shortage_khr = max(0, settings.threshold_khr - khr) if low_khr else 0
+        shortage_usd = max(0, settings.threshold_usd - usd) if low_usd else 0
         msg_parts = [
             f"⚠️ BALANCE STILL LOW (Check #{total_account})",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             f"⏰ Timestamp: {ts}",
             "",
-            f"🔴 {label} KHR: {khr:,.2f}",
-            f"   Threshold: {settings.threshold_khr:,.2f}",
-            f"   Shortage: {shortage_khr:,.2f}",
-            "",
+        ]
+        if low_khr:
+            msg_parts.extend([
+                f"🔴 {label} KHR: {khr:,.2f}",
+                f"   Threshold: {settings.threshold_khr:,.2f}",
+                f"   Shortage: {shortage_khr:,.2f}",
+                "",
+            ])
+        if low_usd:
+            msg_parts.extend([
+                f"🔴 {label} USD: {usd:,.2f}",
+                f"   Threshold: {settings.threshold_usd:,.2f}",
+                f"   Shortage: {shortage_usd:,.2f}",
+                "",
+            ])
+        msg_parts.extend([
             "📊 All Balances:",
             f"   {label} - KHR: {khr:,.2f}",
             f"   {label} - USD: {usd:,.2f}",
-        ]
+        ])
         msg = "\n".join(msg_parts)
         sent = await send_telegram_message(msg)  # uses telegram_chat_id (alert)
         if sent:

@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     bakong_base_url: str = "http://10.169.111.11"
     bakong_username: str = ""
     bakong_password: str = ""
+    # Balance inquiry code (e.g. BONGKHPPXXX) in path .../balance-inquiry/fast-core/{code}
+    balance_inquiry_code: str = "BONGKHPPXXX"
 
     # Balance label shown in Telegram (e.g. BLCB, BLBK)
     balance_label: str = "BLCB"
